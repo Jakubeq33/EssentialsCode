@@ -2,10 +2,10 @@
 name = "essentials-code"
 version = "0.2.0"
 edition = "2021"
-authors = ["KUBA"]
+authors = ["Kubusieq"]
 description = "Smart error fixer for developers - paste error, get fix"
 license = "MIT"
-repository = "https://github.com/KUBA/EssentialsCode"
+repository = "https://github.com/Jakubeq33/EssentialsCode"
 keywords = ["cli", "debugger", "error-fixer", "developer-tools"]
 categories = ["command-line-utilities", "development-tools"]
 
@@ -14,14 +14,10 @@ name = "ess"
 path = "src/main.rs"
 
 [dependencies]
-# CLI
 clap = { version = "4.4", features = ["derive"] }
 
-# Terminal UI
 crossterm = "0.27"
 owo-colors = "4.0"
-
-# Utilities
 regex = "1.10"
 walkdir = "2.4"
 anyhow = "1.0"
