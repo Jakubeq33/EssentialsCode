@@ -16,7 +16,7 @@
 
 <div align="center">
 
-🧠 **Root-cause detection** &nbsp;•&nbsp; 🛠️ **Safe fixes (Preview-first)** <br>
+🧠 **Root-cause detection** <br>
 ⚡ **Faster debugging** &nbsp;•&nbsp; 🔒 **Offline-first** &nbsp;•&nbsp; 🧩 **Extensible architecture**
 
 </div>
@@ -98,3 +98,4 @@
 
 
   ● 1 error found
+
