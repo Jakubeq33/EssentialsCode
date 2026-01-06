@@ -12,21 +12,21 @@ pub struct ParsedError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ErrorType {
-    MissingInclude(String),     
+    MissingInclude(String),
     MissingSemicolon,
-    UndeclaredVariable(String),  
-    SyntaxError(String),       
+    UndeclaredVariable(String),
+    SyntaxError(String),
     IndentationError,
-    ImportError(String),       
-    TypeError(String),          
-    ModuleNotFound(String),    
-    BorrowError(String),       
-    KeyError(String),            
-    AttributeError(String),     
-    ValueError(String),          
-    MissingEnvVar(String),      
-    RequestsError(String),     
-    Unknown(String),             
+    ImportError(String),
+    TypeError(String),
+    ModuleNotFound(String),
+    BorrowError(String),
+    KeyError(String),
+    AttributeError(String),
+    ValueError(String),
+    MissingEnvVar(String),
+    RequestsError(String),
+    Unknown(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,7 +95,7 @@ fn parse_cpp_error(input: &str) -> Option<ParsedError> {
 
 fn detect_cpp_error_type(message: &str, full: &str) -> ErrorType {
     let msg = message.to_lowercase();
-    
+
     if msg.contains("is not a member of 'std'") || msg.contains("was not declared") {
         let include_re = Regex::new(r"#include <([^>]+)>").ok();
         if let Some(re) = include_re {
@@ -103,7 +103,7 @@ fn detect_cpp_error_type(message: &str, full: &str) -> ErrorType {
                 return ErrorType::MissingInclude(cap[1].to_string());
             }
         }
-        
+
         if msg.contains("vector") {
             return ErrorType::MissingInclude("vector".to_string());
         }
@@ -120,12 +120,13 @@ fn detect_cpp_error_type(message: &str, full: &str) -> ErrorType {
             return ErrorType::MissingInclude("set".to_string());
         }
     }
-    
+
     if msg.contains("expected ';'") || msg.contains("expected ';' before") {
         return ErrorType::MissingSemicolon;
     }
-    
-    let undecl_re = Regex::new(r"'([^']+)' was not declared|use of undeclared identifier '([^']+)'").ok();
+
+    let undecl_re =
+        Regex::new(r"'([^']+)' was not declared|use of undeclared identifier '([^']+)'").ok();
     if let Some(re) = undecl_re {
         if let Some(cap) = re.captures(&msg) {
             let var = cap.get(1).or(cap.get(2)).map(|m| m.as_str().to_string());
@@ -141,12 +142,12 @@ fn detect_cpp_error_type(message: &str, full: &str) -> ErrorType {
 fn parse_python_error(input: &str) -> Option<ParsedError> {
     let file_re = Regex::new(r#"File "([^"]+\.py)", line (\d+)"#).ok()?;
     let error_re = Regex::new(r"(SyntaxError|IndentationError|NameError|ImportError|TypeError|ModuleNotFoundError|KeyError|AttributeError|ValueError|requests\.exceptions\.\w+): (.+)").ok()?;
-    
+
     let requests_re = Regex::new(r"requests\.exceptions\.(\w+): (.+)").ok()?;
 
     let file_cap = file_re.captures(input);
     let error_cap = error_re.captures(input);
-    
+
     if let Some(req_cap) = requests_re.captures(input) {
         let error_name = req_cap[1].to_string();
         let details = req_cap[2].to_string();
@@ -156,8 +157,11 @@ fn parse_python_error(input: &str) -> Option<ParsedError> {
         } else {
             ErrorType::RequestsError(format!("{}: {}", error_name, details))
         };
-        
-        let file = file_cap.as_ref().map(|c| c[1].to_string()).unwrap_or_else(|| "unknown.py".to_string());
+
+        let file = file_cap
+            .as_ref()
+            .map(|c| c[1].to_string())
+            .unwrap_or_else(|| "unknown.py".to_string());
         let line = file_cap.as_ref().and_then(|c| c[2].parse().ok());
 
         return Some(ParsedError {
@@ -226,9 +230,9 @@ fn parse_python_error(input: &str) -> Option<ParsedError> {
 fn parse_js_error(input: &str) -> Option<ParsedError> {
     let file_re = Regex::new(r"([^\s:]+\.(js|ts|jsx|tsx|mjs)):(\d+)(?::(\d+))?").ok()?;
     let error_re = Regex::new(r"(SyntaxError|TypeError|ReferenceError): (.+)").ok()?;
-    
+
     let ts_re = Regex::new(r"([^\s(]+\.(ts|tsx))\((\d+),(\d+)\): error (TS\d+): (.+)").ok()?;
-    
+
     if let Some(cap) = ts_re.captures(input) {
         let file = cap[1].to_string();
         let line: u32 = cap[3].parse().ok()?;
@@ -262,7 +266,7 @@ fn parse_js_error(input: &str) -> Option<ParsedError> {
             language: Language::TypeScript,
         });
     }
-    
+
     if let Some(file_cap) = file_re.captures(input) {
         if let Some(error_cap) = error_re.captures(input) {
             let file = file_cap[1].to_string();
@@ -352,4 +356,281 @@ fn parse_rust_error(input: &str) -> Option<ParsedError> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==================== C++ Parser Tests ====================
+
+    #[test]
+    fn test_parse_cpp_missing_include() {
+        let error = "main.cpp:5:10: error: 'vector' is not a member of 'std'";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.language, Language::Cpp);
+        assert_eq!(parsed.file, "main.cpp");
+        assert_eq!(parsed.line, Some(5));
+        assert_eq!(parsed.column, Some(10));
+        assert!(matches!(parsed.error_type, ErrorType::MissingInclude(_)));
+    }
+
+    #[test]
+    fn test_parse_cpp_missing_semicolon() {
+        let error = "test.cpp:10:5: error: expected ';' before 'return'";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.error_type, ErrorType::MissingSemicolon);
+    }
+
+    #[test]
+    fn test_parse_cpp_undeclared_variable() {
+        let error = "main.cpp:8:12: error: 'myVar' was not declared in this scope";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::UndeclaredVariable(ref v) if v == "myvar"));
+    }
+
+    // ==================== Python Parser Tests ====================
+
+    #[test]
+    fn test_parse_python_syntax_error() {
+        let error = r#"File "test.py", line 5
+    def foo(
+        ^
+SyntaxError: unexpected EOF while parsing"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.language, Language::Python);
+        assert_eq!(parsed.file, "test.py");
+        assert_eq!(parsed.line, Some(5));
+        assert!(matches!(parsed.error_type, ErrorType::SyntaxError(_)));
+    }
+
+    #[test]
+    fn test_parse_python_indentation_error() {
+        let error = r#"File "script.py", line 10
+    print("hello")
+    ^
+IndentationError: unexpected indent"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.error_type, ErrorType::IndentationError);
+    }
+
+    #[test]
+    fn test_parse_python_name_error() {
+        let error = r#"File "app.py", line 15
+NameError: name 'undefined_var' is not defined"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(
+            matches!(parsed.error_type, ErrorType::UndeclaredVariable(ref v) if v == "undefined_var")
+        );
+    }
+
+    #[test]
+    fn test_parse_python_import_error() {
+        let error = r#"File "main.py", line 1
+ImportError: No module named 'nonexistent_module'"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(
+            matches!(parsed.error_type, ErrorType::ImportError(ref m) if m == "nonexistent_module")
+        );
+    }
+
+    #[test]
+    fn test_parse_python_key_error() {
+        let error = r#"File "data.py", line 20
+KeyError: 'missing_key'"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::KeyError(_)));
+    }
+
+    #[test]
+    fn test_parse_python_type_error() {
+        let error = r#"File "calc.py", line 8
+TypeError: unsupported operand type(s) for +: 'int' and 'str'"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::TypeError(_)));
+    }
+
+    #[test]
+    fn test_parse_python_attribute_error() {
+        let error = r#"File "obj.py", line 12
+AttributeError: 'NoneType' object has no attribute 'split'"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::AttributeError(_)));
+    }
+
+    #[test]
+    fn test_parse_python_value_error() {
+        let error = r#"File "parse.py", line 5
+ValueError: invalid literal for int() with base 10: 'abc'"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::ValueError(_)));
+    }
+
+    // ==================== JavaScript Parser Tests ====================
+
+    #[test]
+    fn test_parse_js_syntax_error() {
+        let error = "app.js:15:20\nSyntaxError: Unexpected token '}'";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.language, Language::JavaScript);
+        assert_eq!(parsed.file, "app.js");
+        assert!(matches!(parsed.error_type, ErrorType::SyntaxError(_)));
+    }
+
+    #[test]
+    fn test_parse_js_reference_error() {
+        let error = "index.js:8:5\nReferenceError: myFunction is not defined";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(
+            matches!(parsed.error_type, ErrorType::UndeclaredVariable(ref v) if v == "myFunction")
+        );
+    }
+
+    #[test]
+    fn test_parse_js_type_error() {
+        let error = "utils.js:22:10\nTypeError: Cannot read property 'length' of undefined";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::TypeError(_)));
+    }
+
+    // ==================== TypeScript Parser Tests ====================
+
+    #[test]
+    fn test_parse_typescript_error() {
+        let error = "src/app.ts(10,15): error TS2304: Cannot find name 'unknownType'";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.language, Language::TypeScript);
+        assert_eq!(parsed.file, "src/app.ts");
+        assert_eq!(parsed.line, Some(10));
+        assert_eq!(parsed.column, Some(15));
+        assert!(
+            matches!(parsed.error_type, ErrorType::UndeclaredVariable(ref v) if v == "unknownType")
+        );
+    }
+
+    #[test]
+    fn test_parse_typescript_module_not_found() {
+        let error = "index.ts(1,20): error TS2307: Cannot find module 'missing-package'";
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::ModuleNotFound(_)));
+    }
+
+    // ==================== Rust Parser Tests ====================
+
+    #[test]
+    fn test_parse_rust_undeclared() {
+        let error = r#"error[E0425]: cannot find value `undefined_var` in this scope
+ --> src/main.rs:10:5
+  |
+10 |     undefined_var
+  |     ^^^^^^^^^^^^^ not found in this scope"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.language, Language::Rust);
+        assert_eq!(parsed.file, "src/main.rs");
+        assert_eq!(parsed.line, Some(10));
+        assert!(
+            matches!(parsed.error_type, ErrorType::UndeclaredVariable(ref v) if v == "undefined_var")
+        );
+    }
+
+    #[test]
+    fn test_parse_rust_borrow_error() {
+        let error = r#"error[E0502]: cannot borrow `x` as mutable because it is also borrowed as immutable
+ --> src/main.rs:5:10
+  |
+4 |     let r = &x;
+  |             -- immutable borrow occurs here"#;
+        let result = parse_error(error);
+
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert!(matches!(parsed.error_type, ErrorType::BorrowError(_)));
+    }
+
+    // ==================== Edge Cases ====================
+
+    #[test]
+    fn test_parse_unknown_error() {
+        let error = "Some random text that is not an error";
+        let result = parse_error(error);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_empty_input() {
+        let result = parse_error("");
+        assert!(result.is_none());
+    }
+
+    // ==================== Language Display Tests ====================
+
+    #[test]
+    fn test_language_display() {
+        assert_eq!(format!("{}", Language::Cpp), "C++");
+        assert_eq!(format!("{}", Language::Python), "Python");
+        assert_eq!(format!("{}", Language::JavaScript), "JavaScript");
+        assert_eq!(format!("{}", Language::TypeScript), "TypeScript");
+        assert_eq!(format!("{}", Language::Rust), "Rust");
+        assert_eq!(format!("{}", Language::Unknown), "Unknown");
+    }
+
+    // ==================== ErrorType Equality Tests ====================
+
+    #[test]
+    fn test_error_type_equality() {
+        assert_eq!(ErrorType::MissingSemicolon, ErrorType::MissingSemicolon);
+        assert_eq!(ErrorType::IndentationError, ErrorType::IndentationError);
+        assert_ne!(ErrorType::MissingSemicolon, ErrorType::IndentationError);
+    }
 }

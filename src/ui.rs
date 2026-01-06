@@ -1,12 +1,12 @@
 use owo_colors::OwoColorize;
 
 const GRADIENT_START: (u8, u8, u8) = (255, 240, 181); // #FFF0B5
-const GRADIENT_END: (u8, u8, u8) = (134, 69, 199);    // #8645C7
-const SUCCESS: (u8, u8, u8) = (134, 239, 172);        // Green
-const ERROR: (u8, u8, u8) = (248, 113, 113);          // Red
-const WARNING: (u8, u8, u8) = (251, 191, 36);         // Amber
-const INFO: (u8, u8, u8) = (147, 197, 253);           // Blue
-const DIM: (u8, u8, u8) = (148, 163, 184);            // Gray
+const GRADIENT_END: (u8, u8, u8) = (134, 69, 199); // #8645C7
+const SUCCESS: (u8, u8, u8) = (134, 239, 172); // Green
+const ERROR: (u8, u8, u8) = (248, 113, 113); // Red
+const WARNING: (u8, u8, u8) = (251, 191, 36); // Amber
+const INFO: (u8, u8, u8) = (147, 197, 253); // Blue
+const DIM: (u8, u8, u8) = (148, 163, 184); // Gray
 
 pub fn print_banner() {
     let banner = r#"
@@ -47,7 +47,12 @@ pub fn print_section(title: &str) {
     println!();
     let line = "─".repeat(60);
     println!("{}", line.truecolor(DIM.0, DIM.1, DIM.2));
-    println!("  {}", title.truecolor(GRADIENT_END.0, GRADIENT_END.1, GRADIENT_END.2).bold());
+    println!(
+        "  {}",
+        title
+            .truecolor(GRADIENT_END.0, GRADIENT_END.1, GRADIENT_END.2)
+            .bold()
+    );
     println!("{}", line.truecolor(DIM.0, DIM.1, DIM.2));
 }
 
@@ -113,11 +118,7 @@ pub fn print_code_line(line_num: u32, code: &str, is_error: bool) {
             code.truecolor(ERROR.0, ERROR.1, ERROR.2)
         );
     } else {
-        println!(
-            "{}{}",
-            num_str.truecolor(DIM.0, DIM.1, DIM.2),
-            code
-        );
+        println!("{}{}", num_str.truecolor(DIM.0, DIM.1, DIM.2), code);
     }
 }
 
@@ -159,7 +160,10 @@ pub fn print_supported_patterns() {
     print_section("Supported Languages & Patterns");
     println!();
 
-    println!("  {}", "C++ (g++/clang++)".truecolor(INFO.0, INFO.1, INFO.2).bold());
+    println!(
+        "  {}",
+        "C++ (g++/clang++)".truecolor(INFO.0, INFO.1, INFO.2).bold()
+    );
     println!("    • Missing #include headers");
     println!("    • Undeclared identifiers");
     println!("    • Missing semicolons");
@@ -173,7 +177,12 @@ pub fn print_supported_patterns() {
     println!("    • ImportError");
     println!();
 
-    println!("  {}", "JavaScript/TypeScript".truecolor(INFO.0, INFO.1, INFO.2).bold());
+    println!(
+        "  {}",
+        "JavaScript/TypeScript"
+            .truecolor(INFO.0, INFO.1, INFO.2)
+            .bold()
+    );
     println!("    • SyntaxError (unexpected tokens)");
     println!("    • ReferenceError");
     println!("    • TypeError");
@@ -195,7 +204,9 @@ pub fn print_no_errors() {
     println!(
         "  {} {}",
         "✓".truecolor(SUCCESS.0, SUCCESS.1, SUCCESS.2).bold(),
-        "No errors found!".truecolor(SUCCESS.0, SUCCESS.1, SUCCESS.2).bold()
+        "No errors found!"
+            .truecolor(SUCCESS.0, SUCCESS.1, SUCCESS.2)
+            .bold()
     );
     println!();
 }
@@ -205,7 +216,10 @@ pub fn print_errors_found(count: usize) {
     println!(
         "  {} {} error{} found",
         "●".truecolor(ERROR.0, ERROR.1, ERROR.2).bold(),
-        count.to_string().truecolor(ERROR.0, ERROR.1, ERROR.2).bold(),
+        count
+            .to_string()
+            .truecolor(ERROR.0, ERROR.1, ERROR.2)
+            .bold(),
         if count == 1 { "" } else { "s" }
     );
 }

@@ -5,12 +5,10 @@ use anyhow::Result;
 pub fn analyze_error(error_text: &str) -> Result<()> {
     ui::print_section("Analyzing Error");
 
-
     if let Some(error) = parse_error(error_text) {
         show_parsed_error(&error);
         show_fix_for_error(&error);
     } else {
-
         ui::print_warning("Could not fully parse error format");
         ui::print_info("Attempting pattern matching...");
         println!();
@@ -104,10 +102,7 @@ fn fix_missing_include(header: &str, lang: &Language) {
 fn fix_missing_semicolon(lang: &Language) {
     match lang {
         Language::Cpp | Language::JavaScript | Language::TypeScript => {
-            ui::print_diff(
-                "statement  // missing semicolon",
-                "statement;",
-            );
+            ui::print_diff("statement  // missing semicolon", "statement;");
             ui::print_fix_instruction(
                 "Add a semicolon at the end of the line indicated in the error.\n\n\
                 Look for the line number in the error message and add ';' at the end.",
@@ -327,11 +322,10 @@ fn fix_borrow_error(details: &str) {
 
 fn try_common_patterns(error_text: &str) -> Option<String> {
     let lower = error_text.to_lowercase();
-    
+
     if lower.contains("expected ';'") || lower.contains("missing semicolon") {
         return Some("Add a semicolon (;) at the end of the line.".to_string());
     }
-
 
     if lower.contains("is not a member of") || lower.contains("was not declared") {
         return Some(
@@ -340,7 +334,6 @@ fn try_common_patterns(error_text: &str) -> Option<String> {
                 .to_string(),
         );
     }
-
 
     if lower.contains("is not defined") || lower.contains("undeclared") {
         return Some(
@@ -366,8 +359,17 @@ fn try_common_patterns(error_text: &str) -> Option<String> {
 fn is_std_type(name: &str) -> bool {
     matches!(
         name.to_lowercase().as_str(),
-        "vector" | "string" | "map" | "set" | "list" | "deque" | "array"
-            | "unique_ptr" | "shared_ptr" | "optional" | "variant"
+        "vector"
+            | "string"
+            | "map"
+            | "set"
+            | "list"
+            | "deque"
+            | "array"
+            | "unique_ptr"
+            | "shared_ptr"
+            | "optional"
+            | "variant"
     )
 }
 
@@ -377,7 +379,10 @@ fn fix_key_error(key: &str) {
 
     ui::print_diff(
         &format!("data[\"{}\"]  # raises KeyError if missing", key),
-        &format!("data.get(\"{}\", default_value)  # returns default if missing", key),
+        &format!(
+            "data.get(\"{}\", default_value)  # returns default if missing",
+            key
+        ),
     );
 
     ui::print_fix_instruction(&format!(
@@ -526,5 +531,192 @@ fn fix_requests_error(details: &str) {
             except requests.exceptions.RequestException as e:\n\
                 print(f\"Request failed: {e}\")",
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==================== try_common_patterns Tests ====================
+
+    #[test]
+    fn test_pattern_missing_semicolon() {
+        let result = try_common_patterns("expected ';' before return");
+        assert!(result.is_some());
+        assert!(result.unwrap().contains("semicolon"));
+    }
+
+    #[test]
+    fn test_pattern_missing_semicolon_variant() {
+        let result = try_common_patterns("missing semicolon at end of line");
+        assert!(result.is_some());
+        assert!(result.unwrap().contains("semicolon"));
+    }
+
+    #[test]
+    fn test_pattern_not_a_member() {
+        let result = try_common_patterns("'vector' is not a member of 'std'");
+        assert!(result.is_some());
+        let msg = result.unwrap();
+        assert!(msg.contains("import") || msg.contains("include"));
+    }
+
+    #[test]
+    fn test_pattern_was_not_declared() {
+        let result = try_common_patterns("'myVar' was not declared in this scope");
+        assert!(result.is_some());
+        let msg = result.unwrap();
+        assert!(msg.contains("import") || msg.contains("include"));
+    }
+
+    #[test]
+    fn test_pattern_is_not_defined() {
+        let result = try_common_patterns("ReferenceError: x is not defined");
+        assert!(result.is_some());
+        let msg = result.unwrap();
+        assert!(msg.contains("define") || msg.contains("declare"));
+    }
+
+    #[test]
+    fn test_pattern_undeclared() {
+        let result = try_common_patterns("use of undeclared identifier 'foo'");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_pattern_unexpected_token() {
+        let result = try_common_patterns("SyntaxError: unexpected token '}'");
+        assert!(result.is_some());
+        let msg = result.unwrap();
+        assert!(msg.contains("bracket") || msg.contains("Syntax"));
+    }
+
+    #[test]
+    fn test_pattern_was_never_closed() {
+        let result = try_common_patterns("string literal was never closed");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_pattern_no_match() {
+        let result = try_common_patterns("some random unrecognized error");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_pattern_empty_input() {
+        let result = try_common_patterns("");
+        assert!(result.is_none());
+    }
+
+    // ==================== is_std_type Tests ====================
+
+    #[test]
+    fn test_is_std_type_vector() {
+        assert!(is_std_type("vector"));
+        assert!(is_std_type("Vector"));
+        assert!(is_std_type("VECTOR"));
+    }
+
+    #[test]
+    fn test_is_std_type_string() {
+        assert!(is_std_type("string"));
+        assert!(is_std_type("String"));
+    }
+
+    #[test]
+    fn test_is_std_type_map() {
+        assert!(is_std_type("map"));
+        assert!(is_std_type("Map"));
+    }
+
+    #[test]
+    fn test_is_std_type_set() {
+        assert!(is_std_type("set"));
+        assert!(is_std_type("Set"));
+    }
+
+    #[test]
+    fn test_is_std_type_smart_pointers() {
+        assert!(is_std_type("unique_ptr"));
+        assert!(is_std_type("shared_ptr"));
+    }
+
+    #[test]
+    fn test_is_std_type_containers() {
+        assert!(is_std_type("list"));
+        assert!(is_std_type("deque"));
+        assert!(is_std_type("array"));
+    }
+
+    #[test]
+    fn test_is_std_type_modern_cpp() {
+        assert!(is_std_type("optional"));
+        assert!(is_std_type("variant"));
+    }
+
+    #[test]
+    fn test_is_std_type_not_std() {
+        assert!(!is_std_type("MyClass"));
+        assert!(!is_std_type("foo"));
+        assert!(!is_std_type("random_name"));
+    }
+
+    // ==================== ErrorType Handling Tests ====================
+
+    #[test]
+    fn test_error_type_variants_exist() {
+        // Verify all error types can be matched
+        let types = vec![
+            ErrorType::MissingInclude("test".to_string()),
+            ErrorType::MissingSemicolon,
+            ErrorType::UndeclaredVariable("var".to_string()),
+            ErrorType::SyntaxError("details".to_string()),
+            ErrorType::IndentationError,
+            ErrorType::ImportError("module".to_string()),
+            ErrorType::TypeError("info".to_string()),
+            ErrorType::ModuleNotFound("mod".to_string()),
+            ErrorType::BorrowError("borrow".to_string()),
+            ErrorType::KeyError("key".to_string()),
+            ErrorType::AttributeError("attr".to_string()),
+            ErrorType::ValueError("val".to_string()),
+            ErrorType::MissingEnvVar("VAR".to_string()),
+            ErrorType::RequestsError("req".to_string()),
+            ErrorType::Unknown("unknown".to_string()),
+        ];
+
+        assert_eq!(types.len(), 15);
+    }
+
+    // ==================== Integration-style Tests ====================
+
+    #[test]
+    fn test_analyze_error_does_not_panic_on_valid_input() {
+        // These should not panic
+        let test_cases = vec![
+            r#"File "test.py", line 5
+SyntaxError: invalid syntax"#,
+            "main.cpp:10:5: error: expected ';' before 'return'",
+            r#"error[E0425]: cannot find value `x`
+ --> src/main.rs:5:10"#,
+        ];
+
+        for case in test_cases {
+            let result = analyze_error(case);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_analyze_error_handles_unknown_format() {
+        let result = analyze_error("completely random text");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_analyze_error_handles_empty_input() {
+        let result = analyze_error("");
+        assert!(result.is_ok());
     }
 }

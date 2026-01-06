@@ -23,7 +23,7 @@
 
 ---
 
-> **Status:** Pre-release (Rust CLI/TUI).  
+> **Status:** Pre-release (Rust CLI/TUI).
 > EssentialsCode analyzes errors and sends what went wrong.
 
 ---
@@ -39,14 +39,12 @@
 - Modular architecture built around a clear pipeline: `scanner → parser → fixer`.
 - New languages and rules can be added without touching the core engine.
 
-> ⚠️ **Note**  
-> EssentialsCode is also a personal learning project where I actively practice and improve my **Rust** skills.  
+> ⚠️ **Note**
+> EssentialsCode is also a personal learning project where I actively practice and improve my **Rust** skills.
 > While the tool is fully functional, you may encounter bugs, breaking changes, or experimental behavior as the project evolves.
 
 
 ---
-
-
 
 ```text
     ╔═══════════════════════════════════════════════════════════════╗
@@ -93,9 +91,8 @@
 ────────────────────────────────────────────────────────────
 
   Syntax error: invalid syntax. Did you mean 'def'?
-  
+
   Check the line indicated in the error for typos or missing syntax.
 
 
   ● 1 error found
-
