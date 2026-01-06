@@ -292,14 +292,15 @@ fn analyze_python_file(path: &Path) -> Result<usize> {
         }
     }
 
-    if content.contains("f\"") && content.contains("os.getenv") {
-        if content.contains("http") || content.contains("url") || content.contains("URL") {
-            ui::print_warning(&format!(
-                "{} - Using getenv in URL string - will be 'None' if env var missing!",
-                path.file_name().unwrap_or_default().to_string_lossy()
-            ));
-            issues += 1;
-        }
+    if content.contains("f\"")
+        && content.contains("os.getenv")
+        && (content.contains("http") || content.contains("url") || content.contains("URL"))
+    {
+        ui::print_warning(&format!(
+            "{} - Using getenv in URL string - will be 'None' if env var missing!",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        ));
+        issues += 1;
     }
 
     Ok(issues)
@@ -311,7 +312,7 @@ fn process_python_error(stderr: &str) -> Result<usize> {
     if stderr.contains("Traceback") || stderr.contains("Error:") {
         let lines: Vec<&str> = stderr.lines().collect();
 
-        for (i, line) in lines.iter().enumerate() {
+        for line in lines.iter() {
             if line.contains("File \"") && line.contains(", line ") {
                 ui::print_info(line.trim());
             }
@@ -389,7 +390,7 @@ fn check_javascript(path: &Path) -> Result<usize> {
 
         let run_output = Command::new("node")
             .arg(file_str)
-            .current_dir(&path)
+            .current_dir(path)
             .output();
 
         if let Ok(output) = run_output {

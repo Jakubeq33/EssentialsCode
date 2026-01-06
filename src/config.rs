@@ -112,6 +112,7 @@ fn default_true() -> bool {
     true
 }
 
+#[allow(dead_code)]
 impl Config {
     /// Load configuration from project directory or global config
     pub fn load(project_path: Option<&Path>) -> Result<Self> {

@@ -56,6 +56,7 @@ pub fn print_section(title: &str) {
     println!("{}", line.truecolor(DIM.0, DIM.1, DIM.2));
 }
 
+#[allow(dead_code)]
 pub fn print_success(msg: &str) {
     println!(
         "  {} {}",
@@ -109,6 +110,7 @@ pub fn print_file_location(file: &str, line: Option<u32>, col: Option<u32>) {
     );
 }
 
+#[allow(dead_code)]
 pub fn print_code_line(line_num: u32, code: &str, is_error: bool) {
     let num_str = format!("{:>4} │ ", line_num);
     if is_error {

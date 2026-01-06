@@ -84,18 +84,15 @@ fn show_fix_for_error(error: &ParsedError) {
 }
 
 fn fix_missing_include(header: &str, lang: &Language) {
-    match lang {
-        Language::Cpp => {
-            let before = "// Your current code";
-            let after = format!("#include <{}>\n// Your code", header);
+    if lang == &Language::Cpp {
+        let before = "// Your current code";
+        let after = format!("#include <{}>\n// Your code", header);
 
-            ui::print_diff(before, &after);
-            ui::print_fix_instruction(&format!(
-                "Add this line at the top of your file:\n\n  #include <{}>",
-                header
-            ));
-        }
-        _ => {}
+        ui::print_diff(before, &after);
+        ui::print_fix_instruction(&format!(
+            "Add this line at the top of your file:\n\n  #include <{}>",
+            header
+        ));
     }
 }
 
@@ -172,7 +169,7 @@ fn fix_undeclared_variable(var: &str, lang: &Language) {
     }
 }
 
-fn fix_syntax_error(details: &str, lang: &Language) {
+fn fix_syntax_error(details: &str, _lang: &Language) {
     ui::print_section("Syntax Error");
     println!();
 
@@ -468,7 +465,7 @@ fn fix_value_error(details: &str) {
     }
 }
 
-fn fix_missing_env_var(details: &str) {
+fn fix_missing_env_var(_details: &str) {
     ui::print_section("Missing Environment Variable");
     println!();
 
